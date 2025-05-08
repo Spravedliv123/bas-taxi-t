@@ -72,16 +72,12 @@ const publishRideEvent = async (eventType, data, correlationId) => {
   }
 };
 
-export const requestRide = async (
+export const requestTaxiRide = async (
   passengerId,
   origin,
   destination,
   paymentType,
   correlationId,
-  mode,
-  fromAddress,
-  toAddress,
-  comment
 ) => {
   const [latitude, longitude] = origin.split(",").map(Number);
   if (isNaN(latitude) || isNaN(longitude)) {
@@ -93,7 +89,6 @@ export const requestRide = async (
         origin,
         destination,
         correlationId,
-        mode
       );
       const isSupported = await validateCitySupported(city);
       if (!isSupported) {
@@ -145,10 +140,6 @@ export const requestRide = async (
           destinationName,
           rejectedDrivers: [],
           searchStartTime: Date.now(),
-          mode,
-          fromAddress,
-          toAddress,
-          comment,
         },
         { transaction }
       );
@@ -161,7 +152,114 @@ export const requestRide = async (
         correlationId
       );
 
-      startDriverSearch(ride.id, latitude, longitude, correlationId, mode);
+      startDriverSearch(ride.id, latitude, longitude, correlationId, mode = "taxi");
+
+      logger.info("Запрос на поездку успешно отправлен", {
+        rideId: ride.id,
+        correlationId,
+      });
+      return ride;
+    });
+
+    return result;
+  } catch (error) {
+    logger.error("Ошибка при создании поездки", {
+      error: error.message,
+      correlationId,
+    });
+    throw error;
+  }
+};
+
+export const requestCourierRide = async (
+  passengerId,
+  origin,
+  destination,
+  paymentType,
+  correlationId,
+  fromAddress,
+  toAddress,
+  comment
+) => {
+  const [latitude, longitude] = origin.split(",").map(Number);
+  if (isNaN(latitude) || isNaN(longitude)) {
+    throw new Error("Некорректные координаты отправления");
+  }
+
+  try {
+    const result = await sequelize.transaction(async (transaction) => {
+      const { city, distance, duration, price } = await getRideInfo(
+        origin,
+        destination,
+        correlationId,
+      );
+      const isSupported = await validateCitySupported(city);
+      if (!isSupported) {
+        throw new Error(`Город "${city}" не поддерживается`);
+      }
+
+      const [originNameRes, destinationNameRes] = await Promise.all([
+        reverseGeocode(origin),
+        reverseGeocode(destination),
+      ]);
+
+      if (!originNameRes || !originNameRes.address) {
+        throw new Error("Не удалось определить название места отправления");
+      }
+      let originName = originNameRes.address.split(",")[0];
+
+      if (!destinationNameRes || !destinationNameRes.address) {
+        throw new Error("Не удалось определить название места назначения");
+      }
+      let destinationName = destinationNameRes.address.split(",")[0];
+
+      const activeRide = await Ride.findAll({
+        where: {
+          passengerId: passengerId,
+          status: { [Op.not]: ["completed", "cancelled"] },
+        },
+      });
+
+      if (!activeRide) {
+        throw new Error("Не удалось получить информацию об активной поездки");
+      }
+
+      if (activeRide.length !== 0) {
+        throw new Error("Для создания новой поездки, завершите текущую");
+      }
+
+      const ride = await Ride.create(
+        {
+          passengerId,
+          origin,
+          destination,
+          city,
+          paymentType,
+          price,
+          duration,
+          distance,
+          status: "pending",
+          originName,
+          destinationName,
+          rejectedDrivers: [],
+          searchStartTime: Date.now(),
+          mode: "courier",
+          fromAddress,
+          toAddress,
+          comment
+        },
+        { transaction }
+      );
+
+      await sendRideRequestToGeoService(
+        ride.id,
+        origin,
+        destination,
+        city,
+        correlationId
+      );
+
+      startDriverSearch(ride.id, latitude, longitude, correlationId, mode = "courier");
 
       logger.info("Запрос на поездку успешно отправлен", {
         rideId: ride.id,

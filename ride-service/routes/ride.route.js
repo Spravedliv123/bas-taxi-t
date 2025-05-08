@@ -27,7 +27,8 @@ import {
   getTariffHandler,
   getUserRidesHandler,
   onsiteRideHandler,
-  requestRideHandler,
+  requestRideTaxiHandler,
+  requestRideCourierHandler,
   startRideByQRHandler,
   startRideHandler,
   updateBaseTariffHandler,
@@ -151,12 +152,21 @@ router.get("/health", (req, res) => {
  *         description: Внутренняя ошибка сервера
  */
 router.post(
-  "/request",
+  "/request/taxi",
   authMiddleware(["driver", "passenger"]),
   validateInputMiddleware({
     "body": ["origin", "destination", "paymentType"]
   }),
-  requestRideHandler
+  requestRideTaxiHandler
+);
+
+router.post(
+  "/request/courier",
+  authMiddleware(["driver", "passenger"]),
+  validateInputMiddleware({
+    "body": ["origin", "destination", "paymentType", "fromAddress", "toAddress", "comment"]
+  }),
+  requestRideCourierHandler
 );
 
 /**

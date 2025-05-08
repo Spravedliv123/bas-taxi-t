@@ -18,7 +18,8 @@ import {
   getRideInfo,
   getUserRides,
   onsiteRide,
-  requestRide,
+  requestTaxiRide,
+  requestCourierRide,
   startRide,
   startRideByQR,
   updateRideStatus,
@@ -44,7 +45,7 @@ import Ride from "../models/ride.model.js";
 import { findNearbyParkedDrivers } from "../services/location.serrvice.js";
 import logger from "../utils/logger.js";
 
-export const requestRideHandler = async (req, res) => {
+export const requestRideTaxiHandler = async (req, res) => {
   try {
     const { origin, destination, paymentType } = req.body;
     const passengerId = req.user.userId;
@@ -56,12 +57,49 @@ export const requestRideHandler = async (req, res) => {
         .json({ error: "Некорректный тип оплаты", correlationId });
     }
 
-    const ride = await requestRide(
+    const ride = await requestTaxiRide(
       passengerId,
       origin,
       destination,
       paymentType,
       correlationId
+    );
+
+    ride.price = ride.price.toString();
+
+    res.status(201).json({ message: "Поездка успешно создана", ride });
+  } catch (error) {
+    logger.error("Ошибка при создании поездки", {
+      error: error.message,
+      correlationId: req.correlationId,
+    });
+    res
+      .status(400)
+      .json({ error: error.message, correlationId: req.correlationId });
+  }
+};
+
+export const requestRideCourierHandler = async (req, res) => {
+  try {
+    const { origin, destination, paymentType, fromAddress, toAddress, comment } = req.body;
+    const passengerId = req.user.userId;
+    const correlationId = req.correlationId;
+
+    if (!["cash", "card"].includes(paymentType)) {
+      return res
+        .status(400)
+        .json({ error: "Некорректный тип оплаты", correlationId });
+    }
+
+    const ride = await requestCourierRide(
+      passengerId,
+      origin,
+      destination,
+      paymentType,
+      correlationId,
+      fromAddress,
+      toAddress,
+      comment
     );
 
     ride.price = ride.price.toString();
