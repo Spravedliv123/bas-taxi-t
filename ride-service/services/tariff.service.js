@@ -1460,8 +1460,7 @@ export const updateBaseTariff = async (
   costPerKm,
   costPerMinute,
   adminId,
-  reason,
-  mode
+  reason
 ) => {
   const transaction = await Tariff.sequelize.transaction();
   try {

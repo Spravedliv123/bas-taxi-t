@@ -46,15 +46,7 @@ import logger from "../utils/logger.js";
 
 export const requestRideHandler = async (req, res) => {
   try {
-    const {
-      origin,
-      destination,
-      paymentType,
-      mode,
-      fromAddress,
-      toAddress,
-      comment,
-    } = req.body;
+    const { origin, destination, paymentType } = req.body;
     const passengerId = req.user.userId;
     const correlationId = req.correlationId;
 
@@ -64,25 +56,12 @@ export const requestRideHandler = async (req, res) => {
         .json({ error: "Некорректный тип оплаты", correlationId });
     }
 
-
-    if (mode === "delivery") {
-      if (!fromAddress || !toAddress) {
-        return res
-          .status(400)
-          .json({ error: "Не указаны адреса доставки", correlationId });
-      }
-      
-    }
-        const ride = await requestRide(
+    const ride = await requestRide(
       passengerId,
       origin,
       destination,
       paymentType,
-      correlationId,
-      mode,
-      fromAddress,
-      toAddress,
-      comment
+      correlationId
     );
 
     ride.price = ride.price.toString();
@@ -98,72 +77,6 @@ export const requestRideHandler = async (req, res) => {
       .json({ error: error.message, correlationId: req.correlationId });
   }
 };
-
-// export const createDeliveryOrder = async (req, res) => {
-//   try {
-//     const {
-//       fromAddress,
-//       toAddress,
-//       comment,
-//     } = req.body;
-//     const passengerId = req.user.userId;
-//     const correlationId = req.correlationId;
-
-//     // const distanceData = await fetch("http://???/geo/distance", {
-//     //   method: "POST",
-//     //   headers: {
-//     //     "Content-Type": "application/json",
-//     //   },
-//     //   body: JSON.stringify({
-//     //     from: fromAddress,
-//     //     to: toAddress,
-//     //   }),
-//     // });
-
-//     // const driversRes = await fetch("http://???/auth/drivers?mode=courier", {
-//     //   method: "GET",
-//     // });
-
-//     const availableDrivers = driversRes.data.drivers;
-//     if (!availableDrivers.length) {
-//       return res
-//         .status(404)
-//         .json({ error: "Нет доступных курьеров", correlationId });
-//     }
-
-//     if (!fromAddress || !toAddress) {
-//       return res
-//         .status(400)
-//         .json({ error: "Не указаны адреса доставки", correlationId });
-//     }
-
-//     const ride = await requestRide(
-//       passengerId,
-//       fromAddress,
-//       toAddress,
-//       "card",
-//       correlationId,
-//       "delivery",
-//       fromAddress,
-//       toAddress,
-//       comment
-//     );
-
-//     ride.price = ride.price.toString();
-
-//     logger.info('New delivery order', { order_id, fromAddress, toAddress, comment });
-//     res.status(201).json({ order_id: ride.id, status: 'pending', estimated_time: distanceData.duration });
-//   } catch (error) {
-//     logger.error("Ошибка при создании поездки", {
-//       error: error.message,
-//       correlationId: req.correlationId,
-//     });
-//     res
-//       .status(400)
-//       .json({ error: error.message, correlationId: req.correlationId });
-//   }
-// };
-
 
 export const cancelRideHandler = async (req, res) => {
   try {
@@ -211,14 +124,6 @@ export const acceptRideHandler = async (req, res) => {
       .status(400)
       .json({ error: error.message, correlationId: req.correlationId });
   }
-};
-
-export const updateDriverMode = async (req, res) => {
-  const { mode } = req.body;
-  const driverId = req.user.driverId;
-  await Driver.update({ mode }, { where: { id: driverId } });
-  logger.info('Режим водителя изменен', { driverId, mode });
-  res.json({ message: "Вы успешно поменяли режим", mode });
 };
 
 export const onsiteRideHandler = async (req, res) => {
@@ -551,11 +456,7 @@ export const getRideDetailsHandler = async (req, res) => {
       });
     }
 
-    const rideDetails = await getRideDetails(
-      rideId,
-      userOrDriverId,
-      correlationId
-    );
+    const rideDetails = await getRideDetails(rideId, userOrDriverId, correlationId);
 
     if (!rideDetails) {
       return res.status(404).json({

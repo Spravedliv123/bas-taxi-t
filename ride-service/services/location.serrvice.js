@@ -20,9 +20,9 @@ const addOrUpdateDriverLocation = async (key, driverId, latitude, longitude) => 
     logger.info(`Местоположение водителя ${driverId} обновлено в ${key}: ${lat}, ${lon}`);
 };
 
-const findDriversInRadius = async (key, latitude, longitude, radius = 100, limit = 10, mode = 'taxi') => {
+const findDriversInRadius = async (key, latitude, longitude, radius = 100, limit = 10, mode) => {
     try {
-        let drivers = await redisClient.sendCommand([
+        const drivers = await redisClient.sendCommand([
             'GEOSEARCH',
             key,
             'FROMLONLAT', longitude.toString(), latitude.toString(),
@@ -36,7 +36,7 @@ const findDriversInRadius = async (key, latitude, longitude, radius = 100, limit
         console.log({ drivers });
 
         drivers = drivers.filter(driver => driver.mode === mode);
-
+        
         if (!drivers || !Array.isArray(drivers)) {
             throw new Error(`Не удалось получить данные из Redis для ключа ${key}`);
         }
@@ -80,9 +80,10 @@ export const removeDriverLocation = async (driverId) => {
     await removeDriverLocationByKey(ACTIVE_DRIVERS_KEY, driverId);
 };
 
-export const findNearbyDrivers = async (latitude, longitude, radius = 5, limit = 10, mode = 'taxi') => {
+export const findNearbyDrivers = async (latitude, longitude, radius = 5, limit = 10, mode) => {
     return await findDriversInRadius(ACTIVE_DRIVERS_KEY, latitude, longitude, radius, limit, mode);
 };
+
 export const addParkedDriverLocation = async (driverId, latitude, longitude) => {
     await addOrUpdateDriverLocation(PARKING_DRIVERS_KEY, driverId, latitude, longitude);
 };

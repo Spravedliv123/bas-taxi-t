@@ -69,23 +69,6 @@ const Ride = sequelize.define('Ride', {
         type: DataTypes.DATE,
         allowNull: true,
     },
-    mode: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-    },
-    fromAddress: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    toAddress: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    comment: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-    }
 }, {
     tableName: 'rides',
     timestamps: true,

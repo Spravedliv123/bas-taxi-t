@@ -7,7 +7,7 @@ import Tariff from "../models/tarrif.model.js";
 import logger from "../utils/logger.js";
 import { assertExchange, getChannel } from "../utils/rabbitmq.js";
 import sequelize from "../utils/sequelize.js";
-import { Op } from "sequelize";
+import { Op } from "sequelize"
 import {
   getCityFromCoordinates,
   getDistanceAndDurationFromGeoService,
@@ -831,7 +831,7 @@ export const updateRideStatus = async (
   }
 };
 
-export const getRideInfo = async (origin, destination, correlationId, mode) => {
+export const getRideInfo = async (origin, destination, correlationId) => {
   try {
     const distanceData = await getDistanceAndDurationFromGeoService(
       origin,
@@ -849,8 +849,7 @@ export const getRideInfo = async (origin, destination, correlationId, mode) => {
     const price = await calculatePriceForCity(
       city,
       distanceInKm,
-      durationInMinutes,
-      mode
+      durationInMinutes
     );
 
     return { city, distance: distanceInKm, duration: durationInMinutes, price };
@@ -1365,13 +1364,10 @@ export const getRideDetails = async (rideId, userOrDriverId, correlationId) => {
 
     const rideData = ride.get({ plain: true });
 
-    if (
-      rideData.passengerId !== userOrDriverId &&
-      rideData.driverId !== userOrDriverId
-    ) {
-      throw new Error("Вы не являетесь участником этой поездки");
+    if (rideData.passengerId !== userOrDriverId && rideData.driverId !== userOrDriverId) {
+        throw new Error("Вы не являетесь участником этой поездки")
     }
-
+    
     if (rideData.price) {
       rideData.price = rideData.price.toString();
     }

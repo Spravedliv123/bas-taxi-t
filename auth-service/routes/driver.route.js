@@ -1,29 +1,21 @@
-import express from "express";
-import multer from "multer";
+import express from 'express';
+import multer from 'multer';
 import {
-  registerDriver,
-  confirmDriverLogin,
-  loginDriver,
-  getDriverById,
-  getDriverData,
-  verifyTokenController,
-  deleteDriverProfile,
-  blockDriver,
-  unblockDriver,
-} from "../controllers/driver.controller.js";
+        registerDriver,
+        confirmDriverLogin,
+        loginDriver,
+        getDriverById,
+        getDriverData, verifyTokenController, deleteDriverProfile, blockDriver, unblockDriver
+} from '../controllers/driver.controller.js';
 import path from "path";
 import * as fs from "node:fs";
-import { fileURLToPath } from "url";
+import {fileURLToPath} from "url";
 import slugify from "slugify";
 import logger from "../utils/logger.js";
-import { authenticate, authorize } from "../middlewares/auth.middleware.js";
-import { validateSchema } from "../middlewares/validate.middleware.js";
-import {
-  registerDriverSchema,
-  loginDriverSchema,
-} from "../validators/driver.js";
-import { validateInputMiddleware } from "../middlewares/validateInput.middleware.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { validateSchema } from '../middlewares/validate.middleware.js';
+import { registerDriverSchema, loginDriverSchema } from '../validators/driver.js';
+import { validateInputMiddleware } from '../middlewares/validateInput.middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,22 +23,22 @@ const __dirname = path.dirname(__filename);
 const router = express.Router();
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, "../uploads");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    let safeFileName = slugify(file.originalname, { lower: true });
+        destination: (req, file, cb) => {
+                const uploadDir = path.join(__dirname, '../uploads');
+                if (!fs.existsSync(uploadDir)) {
+                        fs.mkdirSync(uploadDir, { recursive: true });
+                }
+                cb(null, uploadDir);
+        },
+        filename: (req, file, cb) => {
+                const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+                let safeFileName = slugify(file.originalname, { lower: true });
 
-    if (safeFileName.length > 100) {
-      safeFileName = safeFileName.substring(0, 100);
-    }
-    cb(null, `${uniqueSuffix}-${safeFileName}`);
-  },
+                if (safeFileName.length > 100) {
+                        safeFileName = safeFileName.substring(0, 100);
+                }
+                cb(null, `${uniqueSuffix}-${safeFileName}`);
+        },
 });
 const upload = multer({ storage });
 
@@ -57,8 +49,8 @@ const upload = multer({ storage });
  *   description: Маршруты для водителей
  */
 
-router.get("/:id", getDriverById);
-router.get("/data/:id", getDriverData);
+router.get('/:id', getDriverById);
+router.get('/data/:id', getDriverData);
 
 /**
  * @swagger
@@ -112,12 +104,7 @@ router.get("/data/:id", getDriverData);
  *       500:
  *         description: Ошибка сервера
  */
-router.post(
-  "/:driverId/block",
-  authenticate,
-  authorize(["admin", "superadmin"]),
-  blockDriver
-);
+router.post('/:driverId/block', authenticate, authorize(['admin', 'superadmin']), blockDriver);
 
 /**
  * @swagger
@@ -154,7 +141,7 @@ router.post(
  *                       example: 1
  *                     phoneNumber:
  *                       type: string
- *                       example: "+1234567890"
+ *                       example: "+1234567890" 
  *                     isBlocked:
  *                       type: boolean
  *                       example: false
@@ -167,12 +154,7 @@ router.post(
  *       500:
  *         description: Ошибка сервера
  */
-router.post(
-  "/:driverId/unblock",
-  authenticate,
-  authorize(["admin", "superadmin"]),
-  unblockDriver
-);
+router.post('/:driverId/unblock', authenticate, authorize(['admin', 'superadmin']), unblockDriver);
 
 /**
  * @swagger
@@ -317,52 +299,43 @@ router.post(
  *               $ref: '#/components/schemas/Error'
  */
 router.post(
-  "/register",
-  (req, res, next) => {
-    upload.fields([
-      { name: "driversLicensePhoto", maxCount: 1 },
-      { name: "technicalPassportFrontPhoto", maxCount: 1 },
-      { name: "technicalPassportBackPhoto", maxCount: 1 },
-      { name: "identityDocumentFrontPhoto", maxCount: 1 },
-      { name: "identityDocumentWithHandsPhoto", maxCount: 1 },
-      { name: "carPhotoFront", maxCount: 1 },
-      { name: "carPhotoRight", maxCount: 1 },
-      { name: "carPhotoBack", maxCount: 1 },
-      { name: "carPhotoLeft", maxCount: 1 },
-      { name: "carPhotoFrontPassenger", maxCount: 1 },
-      { name: "carPhotoRearSeats", maxCount: 1 },
-      { name: "carPhotoOpenTrunk", maxCount: 1 },
-    ])(req, res, (err) => {
-      if (err) {
-        if (err instanceof multer.MulterError) {
-          logger.error("Ошибка загрузки файлов:", { error: err.message });
-          return res.status(400).json({ error: err.message });
-        } else {
-          logger.error("Ошибка сервера при загрузке файлов:", {
-            error: err.message,
-          });
-          return res.status(500).json({ error: "Ошибка сервера" });
-        }
-      }
-      next();
-    });
-  },
-  validateInputMiddleware({
-    body: [
-      "phoneNumber",
-      "fullName",
-      "address",
-      "city",
-      "technicalPassport",
-      "carBrand",
-      "carModel",
-      "licensePlate",
-      "manufactureDate",
-      "vinCode",
-    ],
-  }),
-  registerDriver
+    '/register',
+    (req, res, next) => {
+            upload.fields([
+                    { name: 'driversLicensePhoto', maxCount: 1 },
+                    { name: 'technicalPassportFrontPhoto', maxCount: 1 },
+                    { name: 'technicalPassportBackPhoto', maxCount: 1 },
+                    { name: 'identityDocumentFrontPhoto', maxCount: 1 },
+                    { name: 'identityDocumentWithHandsPhoto', maxCount: 1 },
+                    { name: 'carPhotoFront', maxCount: 1 },
+                    { name: 'carPhotoRight', maxCount: 1 },
+                    { name: 'carPhotoBack', maxCount: 1 },
+                    { name: 'carPhotoLeft', maxCount: 1 },
+                    { name: 'carPhotoFrontPassenger', maxCount: 1 },
+                    { name: 'carPhotoRearSeats', maxCount: 1 },
+                    { name: 'carPhotoOpenTrunk', maxCount: 1 },
+            ])(req, res, (err) => {
+                    if (err) {
+                            if (err instanceof multer.MulterError) {
+                                    logger.error('Ошибка загрузки файлов:', { error: err.message });
+                                    return res.status(400).json({ error: err.message });
+                            } else {
+                                    logger.error('Ошибка сервера при загрузке файлов:', { error: err.message });
+                                    return res.status(500).json({ error: 'Ошибка сервера' });
+                            }
+                    }
+                    next();
+            });
+    },
+    validateInputMiddleware({
+        "body": [
+                "phoneNumber", "fullName", "address", "city", "technicalPassport",
+                "carBrand", "carModel", "licensePlate", "manufactureDate", "vinCode"
+                ]
+    }),
+    registerDriver
 );
+
 
 /**
  * @swagger
@@ -389,11 +362,11 @@ router.post(
  *         description: Ошибка валидации
  */
 router.post(
-  "/login",
-  validateInputMiddleware({
-    body: ["phoneNumber"],
-  }),
-  loginDriver
+    '/login', 
+    validateInputMiddleware({
+        "body": ["phoneNumber"]
+    }),
+    loginDriver
 );
 
 /**
@@ -425,11 +398,11 @@ router.post(
  *         description: Ошибка валидации
  */
 router.post(
-  "/confirm",
-  validateInputMiddleware({
-    body: ["phoneNumber", "verificationCode"],
-  }),
-  confirmDriverLogin
+    '/confirm',
+    validateInputMiddleware({
+        "body": ["phoneNumber", "verificationCode"]
+    }),
+    confirmDriverLogin
 );
 
 /**
@@ -463,7 +436,7 @@ router.post(
  *       401:
  *         description: Токен недействителен или отсутствует
  */
-router.get("/verify-token", verifyTokenController);
+router.get('/verify-token', verifyTokenController);
 
 /**
  * @swagger
@@ -525,7 +498,7 @@ router.get("/verify-token", verifyTokenController);
  *                   type: string
  *                   example: "Ошибка при удалении профиля"
  */
-router.delete("/delete", authenticate, deleteDriverProfile);
+router.delete('/delete', authenticate, deleteDriverProfile);
 
 /**
  * @swagger
@@ -552,13 +525,13 @@ router.delete("/delete", authenticate, deleteDriverProfile);
  *         description: Forbidden access
  */
 router.put(
-  "/:driverId/block",
-  authenticate,
-  authorize(["admin", "superadmin"]),
-  validateInputMiddleware({
-    body: ["reason"],
-  }),
-  blockDriver
+    '/:driverId/block', 
+    authenticate, 
+    authorize(['admin', 'superadmin']), 
+    validateInputMiddleware({
+        "body": ["reason"]
+    }),
+    blockDriver
 );
 
 /**
@@ -585,11 +558,6 @@ router.put(
  *       403:
  *         description: Forbidden access
  */
-router.put(
-  "/:driverId/unblock",
-  authenticate,
-  authorize(["admin", "superadmin"]),
-  unblockDriver
-);
+router.put('/:driverId/unblock', authenticate, authorize(['admin', 'superadmin']), unblockDriver);
 
 export default router;

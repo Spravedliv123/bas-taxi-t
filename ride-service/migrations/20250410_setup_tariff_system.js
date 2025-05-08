@@ -1,3 +1,4 @@
+import { DataTypes } from "sequelize";
 
 export async function up(queryInterface) {
   await queryInterface.createTable("cities", {
@@ -13,17 +14,6 @@ export async function up(queryInterface) {
     },
   });
 
-  await queryInterface.addColumn("orders", "type", {
-    type: Sequelize.ENUM("taxi", "delivery"),
-    allowNull: false,
-    defaultValue: "taxi",
-  });
-
-  await queryInterface.addColumn("orders", "comment", {
-    type: Sequelize.TEXT,
-    allowNull: true,
-  });
-
   await queryInterface.createTable("car_classes", {
     id: {
       type: DataTypes.INTEGER,
@@ -37,7 +27,6 @@ export async function up(queryInterface) {
     },
   });
 
-  
   await queryInterface.createTable("tariffs", {
     id: {
       type: DataTypes.INTEGER,
@@ -196,9 +185,6 @@ export async function up(queryInterface) {
 }
 
 export async function down(queryInterface) {
-  await queryInterface.removeColumn("orders", "comment");
-  await queryInterface.removeColumn("orders", "type");
-
   await queryInterface.dropTable("tariff_histories");
   await queryInterface.dropTable("tariffs");
   await queryInterface.dropTable("car_classes");

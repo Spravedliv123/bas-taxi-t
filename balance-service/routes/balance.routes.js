@@ -78,10 +78,6 @@ router.post(
   initiatePayment
 );
 
-router.post("/calculate", validateInputMiddleware({
-  "body": ["orderId", "type"]
-}), )
-
 /**
  * @swagger
  * /api/balance/top-up:

@@ -35,7 +35,6 @@ import {
   updateHourAdjustmentHandler,
   updateMonthAdjustmentHandler,
   updateRideStatusHandler,
-  updateDriverMode
 } from "../controllers/ride.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { validateInputMiddleware } from "../middlewares/validateInput.middleware.js";
@@ -160,11 +159,6 @@ router.post(
   requestRideHandler
 );
 
-
-// router.post("/rides/delivery", validateInputMiddleware({
-//   "body": [fromAddress, toAddress, comment]
-// }), deliveryRideSchema, createDeliveryOrder); 
-
 /**
  * @swagger
  * /rides/accept:
@@ -195,84 +189,7 @@ router.post(
   }),
   acceptRideHandler
 );
-/**
- * @swagger
- * /rides/driver/mode:
- *   put:
- *     tags: [Driver]
- *     summary: Изменение режима работы водителя
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - mode
- *             properties:
- *               mode:
- *                 type: string
- *                 enum: ["courier", "taxi"]
- *     responses:
- *       200:
- *         description: Режим работы водителя успешно изменен
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Режим работы водителя успешно изменен"
- *       400:
- *         description: Неверный запрос
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Неверный запрос"
- *       401:
- *         description: Не авторизован
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Требуется авторизация"
- *       404:
- *         description: Водитель не найден
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Водитель не найден"
- *       500:
- *         description: Внутренняя ошибка сервера
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Ошибка при изменении режима работы водителя (на сервере)"
- */
-router.put(
-  "/driver/mode",
-  authMiddleware(["driver"]),
-  validateInputMiddleware({ body: ["mode"] }),
-  updateDriverMode
-);
+
 /**
  * @swagger
  * /rides/{rideId}/start:
