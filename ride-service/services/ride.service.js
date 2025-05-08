@@ -7,7 +7,7 @@ import Tariff from "../models/tarrif.model.js";
 import logger from "../utils/logger.js";
 import { assertExchange, getChannel } from "../utils/rabbitmq.js";
 import sequelize from "../utils/sequelize.js";
-import { Op } from "sequelize"
+import { Op } from "sequelize";
 import {
   getCityFromCoordinates,
   getDistanceAndDurationFromGeoService,
@@ -72,12 +72,13 @@ const publishRideEvent = async (eventType, data, correlationId) => {
   }
 };
 
-export const requestTaxiRide = async (
+export const requestRide = async (
   passengerId,
   origin,
   destination,
   paymentType,
   correlationId,
+  mode,
 ) => {
   const [latitude, longitude] = origin.split(",").map(Number);
   if (isNaN(latitude) || isNaN(longitude)) {
@@ -89,6 +90,7 @@ export const requestTaxiRide = async (
         origin,
         destination,
         correlationId,
+        mode
       );
       const isSupported = await validateCitySupported(city);
       if (!isSupported) {
@@ -140,6 +142,10 @@ export const requestTaxiRide = async (
           destinationName,
           rejectedDrivers: [],
           searchStartTime: Date.now(),
+          // mode,
+          // fromAddress,
+          // toAddress,
+          // comment, // жду дампа
         },
         { transaction }
       );
@@ -152,114 +158,7 @@ export const requestTaxiRide = async (
         correlationId
       );
 
-      startDriverSearch(ride.id, latitude, longitude, correlationId, mode = "taxi");
-
-      logger.info("Запрос на поездку успешно отправлен", {
-        rideId: ride.id,
-        correlationId,
-      });
-      return ride;
-    });
-
-    return result;
-  } catch (error) {
-    logger.error("Ошибка при создании поездки", {
-      error: error.message,
-      correlationId,
-    });
-    throw error;
-  }
-};
-
-export const requestCourierRide = async (
-  passengerId,
-  origin,
-  destination,
-  paymentType,
-  correlationId,
-  fromAddress,
-  toAddress,
-  comment
-) => {
-  const [latitude, longitude] = origin.split(",").map(Number);
-  if (isNaN(latitude) || isNaN(longitude)) {
-    throw new Error("Некорректные координаты отправления");
-  }
-
-  try {
-    const result = await sequelize.transaction(async (transaction) => {
-      const { city, distance, duration, price } = await getRideInfo(
-        origin,
-        destination,
-        correlationId,
-      );
-      const isSupported = await validateCitySupported(city);
-      if (!isSupported) {
-        throw new Error(`Город "${city}" не поддерживается`);
-      }
-
-      const [originNameRes, destinationNameRes] = await Promise.all([
-        reverseGeocode(origin),
-        reverseGeocode(destination),
-      ]);
-
-      if (!originNameRes || !originNameRes.address) {
-        throw new Error("Не удалось определить название места отправления");
-      }
-      let originName = originNameRes.address.split(",")[0];
-
-      if (!destinationNameRes || !destinationNameRes.address) {
-        throw new Error("Не удалось определить название места назначения");
-      }
-      let destinationName = destinationNameRes.address.split(",")[0];
-
-      const activeRide = await Ride.findAll({
-        where: {
-          passengerId: passengerId,
-          status: { [Op.not]: ["completed", "cancelled"] },
-        },
-      });
-
-      if (!activeRide) {
-        throw new Error("Не удалось получить информацию об активной поездки");
-      }
-
-      if (activeRide.length !== 0) {
-        throw new Error("Для создания новой поездки, завершите текущую");
-      }
-
-      const ride = await Ride.create(
-        {
-          passengerId,
-          origin,
-          destination,
-          city,
-          paymentType,
-          price,
-          duration,
-          distance,
-          status: "pending",
-          originName,
-          destinationName,
-          rejectedDrivers: [],
-          searchStartTime: Date.now(),
-          mode: "courier",
-          fromAddress,
-          toAddress,
-          comment
-        },
-        { transaction }
-      );
-
-      await sendRideRequestToGeoService(
-        ride.id,
-        origin,
-        destination,
-        city,
-        correlationId
-      );
-
-      startDriverSearch(ride.id, latitude, longitude, correlationId, mode = "courier");
+      startDriverSearch(ride.id, latitude, longitude, correlationId, mode);
 
       logger.info("Запрос на поездку успешно отправлен", {
         rideId: ride.id,
@@ -929,7 +828,7 @@ export const updateRideStatus = async (
   }
 };
 
-export const getRideInfo = async (origin, destination, correlationId) => {
+export const getRideInfo = async (origin, destination, correlationId, mode) => {
   try {
     const distanceData = await getDistanceAndDurationFromGeoService(
       origin,
@@ -947,7 +846,8 @@ export const getRideInfo = async (origin, destination, correlationId) => {
     const price = await calculatePriceForCity(
       city,
       distanceInKm,
-      durationInMinutes
+      durationInMinutes,
+      mode
     );
 
     return { city, distance: distanceInKm, duration: durationInMinutes, price };
@@ -1462,10 +1362,13 @@ export const getRideDetails = async (rideId, userOrDriverId, correlationId) => {
 
     const rideData = ride.get({ plain: true });
 
-    if (rideData.passengerId !== userOrDriverId && rideData.driverId !== userOrDriverId) {
-        throw new Error("Вы не являетесь участником этой поездки")
+    if (
+      rideData.passengerId !== userOrDriverId &&
+      rideData.driverId !== userOrDriverId
+    ) {
+      throw new Error("Вы не являетесь участником этой поездки");
     }
-    
+
     if (rideData.price) {
       rideData.price = rideData.price.toString();
     }

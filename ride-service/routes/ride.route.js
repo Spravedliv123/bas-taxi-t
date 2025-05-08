@@ -27,8 +27,7 @@ import {
   getTariffHandler,
   getUserRidesHandler,
   onsiteRideHandler,
-  requestRideTaxiHandler,
-  requestRideCourierHandler,
+  requestRideHandler,
   startRideByQRHandler,
   startRideHandler,
   updateBaseTariffHandler,
@@ -36,6 +35,8 @@ import {
   updateHourAdjustmentHandler,
   updateMonthAdjustmentHandler,
   updateRideStatusHandler,
+  updateDriverMode,
+  requestRideHandlerCourier
 } from "../controllers/ride.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { validateInputMiddleware } from "../middlewares/validateInput.middleware.js";
@@ -155,51 +156,106 @@ router.post(
   "/request/taxi",
   authMiddleware(["driver", "passenger"]),
   validateInputMiddleware({
-    "body": ["origin", "destination", "paymentType"]
+    body: ["origin", "destination", "paymentType"],
   }),
-  requestRideTaxiHandler
+  requestRideHandler
 );
 
 router.post(
-  "/request/courier",
+  "/request/courier/",
   authMiddleware(["driver", "passenger"]),
   validateInputMiddleware({
-    "body": ["origin", "destination", "paymentType", "fromAddress", "toAddress", "comment"]
+    body: ["origin", "destination", "paymentType"],
   }),
-  requestRideCourierHandler
+  requestRideHandlerCourier
 );
 
+router.post(
+  "/accept",
+  authMiddleware(["driver"]),
+  validateInputMiddleware({
+    body: ["rideId"],
+  }),
+  acceptRideHandler
+);
 /**
  * @swagger
- * /rides/accept:
- *   post:
- *     summary: Принять поездку водителем
- *     tags: [Rides]
+ * /rides/driver/mode:
+ *   put:
+ *     tags: [Driver]
+ *     summary: Изменение режима работы водителя
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - mode
  *             properties:
- *               rideId:
- *                 type: integer
- *                 description: Идентификатор поездки
+ *               mode:
+ *                 type: string
+ *                 enum: ["courier", "taxi"]
  *     responses:
  *       200:
- *         description: Поездка успешно принята
+ *         description: Режим работы водителя успешно изменен
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Режим работы водителя успешно изменен"
  *       400:
- *         description: Ошибка при принятии поездки
+ *         description: Неверный запрос
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Неверный запрос"
+ *       401:
+ *         description: Не авторизован
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Требуется авторизация"
+ *       404:
+ *         description: Водитель не найден
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Водитель не найден"
+ *       500:
+ *         description: Внутренняя ошибка сервера
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Ошибка при изменении режима работы водителя (на сервере)"
  */
-router.post(
-  "/accept", 
-  authMiddleware(["driver"]), 
-  validateInputMiddleware({
-    "body": ["rideId"]
-  }),
-  acceptRideHandler
+router.put(
+  "/driver/mode",
+  authMiddleware(["driver"]),
+  validateInputMiddleware({ body: ["mode"] }),
+  updateDriverMode
 );
-
 /**
  * @swagger
  * /rides/{rideId}/start:
@@ -221,11 +277,7 @@ router.post(
  *       500:
  *         description: Внутренняя ошибка сервера
  */
-router.post(
-  "/:rideId/start", 
-  authMiddleware(["driver"]), 
-  startRideHandler
-);
+router.post("/:rideId/start", authMiddleware(["driver"]), startRideHandler);
 
 /**
  * @swagger
@@ -289,7 +341,7 @@ router.post(
   "/:rideId/cancel",
   authMiddleware(["passenger"]),
   validateInputMiddleware({
-    "body": ["cancellationReason"]
+    body: ["cancellationReason"],
   }),
   cancelRideHandler
 );
@@ -315,11 +367,7 @@ router.post(
  *       500:
  *         description: Внутренняя ошибка сервера
  */
-router.post(
-  "/:rideId/onsite", 
-  authMiddleware(["driver"]), 
-  onsiteRideHandler
-);
+router.post("/:rideId/onsite", authMiddleware(["driver"]), onsiteRideHandler);
 
 /**
  * @swagger
@@ -377,7 +425,7 @@ router.put(
   "/update-status",
   authMiddleware(["driver", "passenger"]),
   validateInputMiddleware({
-    "body": ["rideId", "status"]
+    body: ["rideId", "status"],
   }),
   updateRideStatusHandler
 );
@@ -416,7 +464,7 @@ router.post(
   "/parking/activate",
   authMiddleware(["driver"]),
   validateInputMiddleware({
-    "body": ["latitude", "longitude"]
+    body: ["latitude", "longitude"],
   }),
   activateParkingModeHandler
 );
@@ -478,7 +526,7 @@ router.get(
   "/parking/list",
   authMiddleware(["passenger"]),
   validateInputMiddleware({
-    "query": ["latitude", "longitude", "radius"]
+    query: ["latitude", "longitude", "radius"],
   }),
   getNearbyParkedDriversHandler
 );
@@ -511,10 +559,10 @@ router.get(
  *         description: Внутренняя ошибка сервера
  */
 router.post(
-  "/line/activate", 
-  authMiddleware(["driver"]), 
+  "/line/activate",
+  authMiddleware(["driver"]),
   validateInputMiddleware({
-    "body": ["latitude", "longitude"]
+    body: ["latitude", "longitude"],
   }),
   activateLineHandler
 );
@@ -589,7 +637,7 @@ router.get("/car-classes", getCarClassesHandler);
  *         description: Не удалось получить данные о поездке
  */
 router.get(
-  "/:rideId", 
+  "/:rideId",
   authMiddleware(["driver", "passenger"]),
   getRideDetailsHandler
 );
@@ -738,9 +786,9 @@ router.get(
  *         description: Ошибка сервера
  */
 router.get(
-  "/time-range", 
+  "/time-range",
   validateInputMiddleware({
-    "query": ["startTime", "endTime"]
+    query: ["startTime", "endTime"],
   }),
   getRidesByTimeRange
 );
@@ -816,7 +864,7 @@ router.post(
   "/price",
   authMiddleware(["driver", "passenger"]),
   validateInputMiddleware({
-    "body": ["origin", "destination"]
+    body: ["origin", "destination"],
   }),
   getRideInfoHandler
 );
@@ -928,9 +976,16 @@ router.get("/tariffs/:cityId", getTariffHandler);
  *         description: Ошибка сервера
  */
 router.put(
-  "/tariffs/base", 
+  "/tariffs/base",
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "baseFare", "costPerKm", "costPerMinute", "reason"]
+    body: [
+      "cityId",
+      "carClassId",
+      "baseFare",
+      "costPerKm",
+      "costPerMinute",
+      "reason",
+    ],
   }),
   updateBaseTariffHandler
 );
@@ -975,7 +1030,7 @@ router.put(
   "/tariffs/hour",
   authMiddleware(["superadmin", "admin"]),
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "hour", "percent", "reason"]
+    body: ["cityId", "carClassId", "hour", "percent", "reason"],
   }),
   updateHourAdjustmentHandler
 );
@@ -1014,9 +1069,9 @@ router.put(
  *         description: Ошибка сервера
  */
 router.delete(
-  "/tariffs/hour", 
+  "/tariffs/hour",
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "hour", "reason"]
+    body: ["cityId", "carClassId", "hour", "reason"],
   }),
   deleteHourAdjustmentHandler
 );
@@ -1061,7 +1116,7 @@ router.put(
   "/tariffs/month",
   authMiddleware(["superadmin", "admin"]),
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "month", "percent", "reason"]
+    body: ["cityId", "carClassId", "month", "percent", "reason"],
   }),
   updateMonthAdjustmentHandler
 );
@@ -1100,9 +1155,9 @@ router.put(
  *         description: Ошибка сервера
  */
 router.delete(
-  "/tariffs/month", 
+  "/tariffs/month",
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "month", "reason"]
+    body: ["cityId", "carClassId", "month", "reason"],
   }),
   deleteMonthAdjustmentHandler
 );
@@ -1151,9 +1206,9 @@ router.delete(
  *         description: Ошибка сервера
  */
 router.post(
-  "/tariffs/holiday", 
+  "/tariffs/holiday",
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "month", "day", "percent", "reason"]
+    body: ["cityId", "carClassId", "month", "day", "percent", "reason"],
   }),
   addHolidayHandler
 );
@@ -1200,9 +1255,9 @@ router.post(
  *         description: Ошибка сервера
  */
 router.put(
-  "/tariffs/holiday", 
+  "/tariffs/holiday",
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "month", "day", "percent", "reason"]
+    body: ["cityId", "carClassId", "month", "day", "percent", "reason"],
   }),
   updateHolidayHandler
 );
@@ -1246,9 +1301,9 @@ router.put(
  *         description: Ошибка сервера
  */
 router.delete(
-  "/tariffs/holiday", 
+  "/tariffs/holiday",
   validateInputMiddleware({
-    "body": ["cityId", "carClassId", "month", "day", "reason"]
+    body: ["cityId", "carClassId", "month", "day", "reason"],
   }),
   deleteHolidayHandler
 );
@@ -1284,7 +1339,7 @@ router.post(
   "/without-passenger",
   authMiddleware(["driver"]),
   validateInputMiddleware({
-    "body": ["origin", "destination"]
+    body: ["origin", "destination"],
   }),
   createRideWithoutPassengerHandler
 );
@@ -1322,7 +1377,7 @@ router.post(
   "/start-by-qr",
   authMiddleware(["passenger"]),
   validateInputMiddleware({
-    "body": ["driverId", "origin", "destination", "paymentType"]
+    body: ["driverId", "origin", "destination", "paymentType"],
   }),
   startRideByQRHandler
 );

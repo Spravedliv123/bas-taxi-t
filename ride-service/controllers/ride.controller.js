@@ -18,12 +18,13 @@ import {
   getRideInfo,
   getUserRides,
   onsiteRide,
-  requestTaxiRide,
-  requestCourierRide,
+  requestRide,
   startRide,
   startRideByQR,
   updateRideStatus,
 } from "../services/ride.service.js";
+
+import Driver from "../models/driver.model.js";
 
 import {
   addHoliday,
@@ -45,43 +46,17 @@ import Ride from "../models/ride.model.js";
 import { findNearbyParkedDrivers } from "../services/location.serrvice.js";
 import logger from "../utils/logger.js";
 
-export const requestRideTaxiHandler = async (req, res) => {
+export const requestRideHandler = async (req, res) => {
   try {
-    const { origin, destination, paymentType } = req.body;
-    const passengerId = req.user.userId;
-    const correlationId = req.correlationId;
-
-    if (!["cash", "card"].includes(paymentType)) {
-      return res
-        .status(400)
-        .json({ error: "Некорректный тип оплаты", correlationId });
-    }
-
-    const ride = await requestTaxiRide(
-      passengerId,
+    const {
       origin,
       destination,
       paymentType,
-      correlationId
-    );
-
-    ride.price = ride.price.toString();
-
-    res.status(201).json({ message: "Поездка успешно создана", ride });
-  } catch (error) {
-    logger.error("Ошибка при создании поездки", {
-      error: error.message,
-      correlationId: req.correlationId,
-    });
-    res
-      .status(400)
-      .json({ error: error.message, correlationId: req.correlationId });
-  }
-};
-
-export const requestRideCourierHandler = async (req, res) => {
-  try {
-    const { origin, destination, paymentType, fromAddress, toAddress, comment } = req.body;
+      mode,
+      fromAddress,
+      toAddress,
+      comment,
+    } = req.body;
     const passengerId = req.user.userId;
     const correlationId = req.correlationId;
 
@@ -91,12 +66,20 @@ export const requestRideCourierHandler = async (req, res) => {
         .json({ error: "Некорректный тип оплаты", correlationId });
     }
 
-    const ride = await requestCourierRide(
+    if (mode === "delivery") {
+      if (!fromAddress || !toAddress) {
+        return res
+          .status(400)
+          .json({ error: "Не указаны адреса доставки", correlationId });
+      }
+    }
+    const ride = await requestRide(
       passengerId,
       origin,
       destination,
       paymentType,
       correlationId,
+      mode,
       fromAddress,
       toAddress,
       comment
@@ -115,6 +98,107 @@ export const requestRideCourierHandler = async (req, res) => {
       .json({ error: error.message, correlationId: req.correlationId });
   }
 };
+
+export const requestRideHandlerCourier = async (req, res) => {
+  try {
+    const { origin, destination, paymentType, comment } = req.body;
+    const passengerId = req.user.userId;
+    const correlationId = req.correlationId;
+
+    if (!["cash", "card"].includes(paymentType)) {
+      return res
+        .status(400)
+        .json({ error: "Некорректный тип оплаты", correlationId });
+    }
+
+    const ride = await requestRide(
+      passengerId,
+      origin,
+      destination,
+      paymentType,
+      correlationId,
+      comment,
+      mode = "courier"
+    );
+
+    ride.price = ride.price.toString();
+
+    res.status(201).json({ message: "Поездка успешно создана", ride });
+  } catch (error) {
+    logger.error("Ошибка при создании поездки", {
+      error: error.message,
+      correlationId: req.correlationId,
+    });
+    res
+      .status(400)
+      .json({ error: error.message, correlationId: req.correlationId });
+  }
+};
+
+// export const createDeliveryOrder = async (req, res) => {
+//   try {
+//     const {
+//       fromAddress,
+//       toAddress,
+//       comment,
+//     } = req.body;
+//     const passengerId = req.user.userId;
+//     const correlationId = req.correlationId;
+
+//     // const distanceData = await fetch("http://???/geo/distance", {
+//     //   method: "POST",
+//     //   headers: {
+//     //     "Content-Type": "application/json",
+//     //   },
+//     //   body: JSON.stringify({
+//     //     from: fromAddress,
+//     //     to: toAddress,
+//     //   }),
+//     // });
+
+//     // const driversRes = await fetch("http://???/auth/drivers?mode=courier", {
+//     //   method: "GET",
+//     // });
+
+//     const availableDrivers = driversRes.data.drivers;
+//     if (!availableDrivers.length) {
+//       return res
+//         .status(404)
+//         .json({ error: "Нет доступных курьеров", correlationId });
+//     }
+
+//     if (!fromAddress || !toAddress) {
+//       return res
+//         .status(400)
+//         .json({ error: "Не указаны адреса доставки", correlationId });
+//     }
+
+//     const ride = await requestRide(
+//       passengerId,
+//       fromAddress,
+//       toAddress,
+//       "card",
+//       correlationId,
+//       "delivery",
+//       fromAddress,
+//       toAddress,
+//       comment
+//     );
+
+//     ride.price = ride.price.toString();
+
+//     logger.info('New delivery order', { order_id, fromAddress, toAddress, comment });
+//     res.status(201).json({ order_id: ride.id, status: 'pending', estimated_time: distanceData.duration });
+//   } catch (error) {
+//     logger.error("Ошибка при создании поездки", {
+//       error: error.message,
+//       correlationId: req.correlationId,
+//     });
+//     res
+//       .status(400)
+//       .json({ error: error.message, correlationId: req.correlationId });
+//   }
+// };
 
 export const cancelRideHandler = async (req, res) => {
   try {
@@ -162,6 +246,16 @@ export const acceptRideHandler = async (req, res) => {
       .status(400)
       .json({ error: error.message, correlationId: req.correlationId });
   }
+};
+
+export const updateDriverMode = async (req, res) => {
+  try {
+    const { mode } = req.body;
+    const driverId = req.user.driverId;
+    await Driver.update({ mode }, { where: { id: driverId } });
+    logger.info("Режим водителя изменен", { driverId, mode });
+    res.json({ message: "Вы успешно поменяли режим", mode });
+  } catch (error) {}
 };
 
 export const onsiteRideHandler = async (req, res) => {
@@ -494,7 +588,11 @@ export const getRideDetailsHandler = async (req, res) => {
       });
     }
 
-    const rideDetails = await getRideDetails(rideId, userOrDriverId, correlationId);
+    const rideDetails = await getRideDetails(
+      rideId,
+      userOrDriverId,
+      correlationId
+    );
 
     if (!rideDetails) {
       return res.status(404).json({

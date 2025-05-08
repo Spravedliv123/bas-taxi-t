@@ -58,22 +58,34 @@ export const authorize = (roles) => {
     };
 };
 
-export const authMiddleware = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ message: 'Token is missing' });
+export const authMiddleware = (roles = []) => {
+  if (typeof roles === "string") {
+    roles = [roles];
+  }
 
-    const token = authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ message: 'Token is missing' });
+  return (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: "Нет токена авторизации" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "Нет токена авторизации" });
+    }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-            return res.status(403).json({ message: 'Access denied' });
-        }
-        next();
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+
+      if (roles.length && !roles.includes(decoded.role)) {
+        return res.status(403).json({ message: "Доступ запрещен" });
+      }
+
+      next();
     } catch (error) {
-        console.log({ error });
-        res.status(401).json({ message: 'Invalid token 2' });
+      logger.error("Ошибка при проверке JWT", { error: error.message });
+      res.status(401).json({ message: "Неверный токен" });
     }
+  };
 };

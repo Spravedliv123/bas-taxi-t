@@ -65,26 +65,6 @@ const Ride = sequelize.define('Ride', {
         type: DataTypes.BIGINT,
         allowNull: false,
     },
-    mode: {
-        type: DataTypes.ENUM('taxi', 'delivery'),
-        allowNull: false,
-        defaultValue: 'taxi',
-    },
-    fromAddress: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        defaultValue: null,
-    },
-    toAddress: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        defaultValue: null,
-    },
-    comment: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        defaultValue: null,
-    },
     driverArrivalTime: {
         type: DataTypes.DATE,
         allowNull: true,

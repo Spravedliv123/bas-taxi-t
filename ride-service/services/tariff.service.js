@@ -484,7 +484,7 @@ export const calculatePrice = async ({
 };
 
 export const calculatePriceForCity = async (city, distance, duration, mode) => {
-  if ((mode = "delivery")) {
+  if ((mode = "courier")) {
     const cost = 500 + 100 * (distance / 1000)
     return cost 
   } else {
@@ -1460,7 +1460,8 @@ export const updateBaseTariff = async (
   costPerKm,
   costPerMinute,
   adminId,
-  reason
+  reason,
+  mode
 ) => {
   const transaction = await Tariff.sequelize.transaction();
   try {

@@ -139,11 +139,6 @@ Driver.init({
         type: DataTypes.DATE,
         allowNull: true,
     },
-    mode: {
-        type: DataTypes.ENUM('courier', 'taxi'),
-        allowNull: false,
-        defaultValue: 'taxi',
-    }
 }, {
     sequelize,
     modelName: 'Driver',

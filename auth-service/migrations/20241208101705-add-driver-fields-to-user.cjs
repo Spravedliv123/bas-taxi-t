@@ -26,11 +26,6 @@ module.exports = {
       type: Sequelize.STRING,
       allowNull: true,
     });
-    await queryInterface.addColumn('drivers', 'mode', {
-      type: Sequelize.ENUM('taxi', 'courier'),
-      allowNull: false,
-      defaultValue: 'taxi',
-    });
     await queryInterface.addColumn('users', 'licensePlate', {
       type: Sequelize.STRING,
       allowNull: true,
@@ -117,6 +112,5 @@ module.exports = {
     await queryInterface.removeColumn('users', 'carPhotoFrontPassenger');
     await queryInterface.removeColumn('users', 'carPhotoRearSeats');
     await queryInterface.removeColumn('users', 'carPhotoOpenTrunk');
-    await queryInterface.removeColumn('drivers', 'mode');
   }
 };
